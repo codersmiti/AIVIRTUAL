@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import sys
 import time
 from PIL import Image
 import numpy as np
@@ -48,7 +49,6 @@ def setup_environment():
         "AI_Virtual_Wardrobe/Data_preprocessing/test_pose",
         "AI_Virtual_Wardrobe/Data_preprocessing/test_mask",
         "AI_Virtual_Wardrobe/Data_preprocessing/test_colormask",
-
     ]
     for d in subdirs:
         os.makedirs(d, exist_ok=True)
@@ -63,33 +63,59 @@ st.markdown("Upload your image and cloth to see the virtual try-on result.")
 uploaded_img = st.file_uploader("Upload your person image", type=["jpg", "png"], key="person")
 uploaded_cloth = st.file_uploader("Upload your cloth image", type=["jpg", "png"], key="cloth")
 
-
 if uploaded_img and uploaded_cloth:
     st.success("Images uploaded. Generating try-on...")
-
     with st.spinner("Processing..."):
 
-    # Ensure folders exist
-        os.makedirs("AI_Virtual_Wardrobe/inputs/img", exist_ok=True)
-        os.makedirs("AI_Virtual_Wardrobe/inputs/cloth", exist_ok=True)
-
-        # Save inputs with expected names
-        person_path = "AI_Virtual_Wardrobe/inputs/img/000001_0.png"
-        cloth_path = "AI_Virtual_Wardrobe/inputs/cloth/000001_1.png"
-
+        # Save inputs
+        img_name = "000001_0.png"
+        cloth_name = "000001_1.png"
+        person_path = f"AI_Virtual_Wardrobe/inputs/img/{img_name}"
+        cloth_path = f"AI_Virtual_Wardrobe/inputs/cloth/{cloth_name}"
         with open(person_path, "wb") as f:
             f.write(uploaded_img.read())
         with open(cloth_path, "wb") as f:
             f.write(uploaded_cloth.read())
 
-        # Run core pipeline
-        result = os.system("python run_pipeline.py")
+        # === INFERENCES ===
+        sys.path.append("u2net")
+        import u2net_load, u2net_run
+        sys.path.append("AI_Virtual_Wardrobe")
+        from predict_pose import generate_pose_keypoints
 
+        # Resize + Save
+        img = Image.open(person_path).resize((192, 256), Image.BICUBIC)
+        cloth = Image.open(cloth_path).resize((192, 256), Image.BICUBIC).convert("RGB")
+        img.save(f"AI_Virtual_Wardrobe/Data_preprocessing/test_img/{img_name}")
+        cloth.save(f"AI_Virtual_Wardrobe/Data_preprocessing/test_color/{cloth_name}")
 
+        # Run U2Net edge detection
+        u2net = u2net_load.model("u2netp")
+        u2net_run.infer(u2net,
+                        "AI_Virtual_Wardrobe/Data_preprocessing/test_color",
+                        "AI_Virtual_Wardrobe/Data_preprocessing/test_edge")
 
-    tryon_path = "C:/Users/Smiti/Downloads/AIVirtual/results/test/try-on/test_label/000001_0.png"
+        # Run human parsing
+        os.system("python Parsing-/simple_extractor.py "
+                  "--dataset lip "
+                  "--model-restore AI_Virtual_Wardrobe/lip_final.pth "
+                  "--input-dir AI_Virtual_Wardrobe/Data_preprocessing/test_img "
+                  "--output-dir AI_Virtual_Wardrobe/Data_preprocessing/test_label")
 
+        # Run pose estimation
+        generate_pose_keypoints(
+            f"AI_Virtual_Wardrobe/Data_preprocessing/test_img/{img_name}",
+            f"AI_Virtual_Wardrobe/Data_preprocessing/test_pose/{img_name.replace('.png', '_keypoints.json')}"
+        )
 
+        # Create test_pairs.txt
+        with open("AI_Virtual_Wardrobe/Data_preprocessing/test_pairs.txt", "w") as f:
+            f.write(f"{img_name} {cloth_name}")
+
+        # Run try-on model
+        os.system("python AI_Virtual_Wardrobe/test.py")
+
+    tryon_path = "results/test/try-on/test_label/000001_0.png"
     if os.path.exists(tryon_path):
         st.image(tryon_path, caption="👗 Try-On Result")
     else:
