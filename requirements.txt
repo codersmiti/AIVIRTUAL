@@ -1,11 +1,20 @@
+# Streamlit UI and utilities
 streamlit
 gdown
 pillow
-numpy<2.0
+numpy==1.26.4
 opencv-python
-torch==2.3.1
-torchvision==0.17.2
 scikit-image
+
+# PyTorch core + vision
+# torch==2.2.2
+# torchvision==0.17.2
+
+# U2Net (image segmentation)
 scipy
+
+# Human parsing (Parsing- repo uses torchvision transforms, PIL, argparse)
 matplotlib
+
+# For JSON pose keypoints and text I/O
 json5
