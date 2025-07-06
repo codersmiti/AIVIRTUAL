@@ -33,26 +33,15 @@ def setup_environment():
 
         # Download ACGPN checkpoints
         checkpoint_zip = "AI_Virtual_Wardrobe/checkpoints/ACGPN_checkpoints.zip"
-        label2city_path = "AI_Virtual_Wardrobe/checkpoints/label2city"
-        if not os.path.exists(label2city_path):
-            os.makedirs(label2city_path, exist_ok=True)
+        if not os.path.exists(checkpoint_zip):
+            os.makedirs("AI_Virtual_Wardrobe/checkpoints", exist_ok=True)
             gdown.download(
                 "https://drive.google.com/uc?id=1UWT6esQIU_d4tUm8cjxDKMhB8joQbrFx",
                 checkpoint_zip,
                 quiet=False
             )
+            os.system("unzip AI_Virtual_Wardrobe/checkpoints/ACGPN_checkpoints.zip -d AI_Virtual_Wardrobe/checkpoints/")
 
-            # Flatten unzip to remove the root folder layer
-            import zipfile
-            with zipfile.ZipFile(checkpoint_zip, 'r') as zip_ref:
-                for member in zip_ref.namelist():
-                    if member.endswith('/'):
-                        continue
-                    filename = os.path.basename(member)
-                    if filename:
-                        if filename.endswith(".pth"):
-                             with zip_ref.open(member) as source, open(os.path.join(label2city_path, filename), "wb") as target:
-                                 target.write(source.read())
         # Download human parsing model
         parsing_model_path = "AI_Virtual_Wardrobe/lip_final.pth"
         if not os.path.exists(parsing_model_path):
@@ -206,4 +195,3 @@ if setup_environment():
                                 st.write(f"  - {file}")
 else:
     st.error("Environment setup failed. Please check the logs and try again.")
-
