@@ -24,12 +24,19 @@ def setup_environment():
 
     # Download ACGPN checkpoints
     os.makedirs("AI_Virtual_Wardrobe/checkpoints", exist_ok=True)
-    gdown.download(
-        "https://drive.google.com/uc?id=1UWT6esQIU_d4tUm8cjxDKMhB8joQbrFx",
-        "AI_Virtual_Wardrobe/checkpoints/ACGPN_checkpoints.zip",
-        quiet=False
-    )
-    os.system("unzip AI_Virtual_Wardrobe/checkpoints/ACGPN_checkpoints.zip -d AI_Virtual_Wardrobe/checkpoints/")
+
+    zip_path = "AI_Virtual_Wardrobe/checkpoints/ACGPN_checkpoints.zip"
+
+# Download only if not already present
+    if not os.path.exists(zip_path):
+        gdown.download(
+            "https://drive.google.com/uc?id=1UWT6esQIU_d4tUm8cjxDKMhB8joQbrFx",
+            zip_path,
+            quiet=False
+        )
+
+# Always unzip with overwrite (no prompt)
+    os.system(f'unzip -o -q "{zip_path}" -d AI_Virtual_Wardrobe/checkpoints/')
 
     # Download human parsing model
     gdown.download(
