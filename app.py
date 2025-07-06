@@ -44,7 +44,7 @@ def setup_environment():
             # Extract using Python zipfile instead of system unzip
             import zipfile
             with zipfile.ZipFile(checkpoint_zip, 'r') as zip_ref:
-                zip_ref.extractall("AI_Virtual_Wardrobe/checkpoints/")
+                zip_ref.extractall("AI_Virtual_Wardrobe/checkpoints/label2city")
         
         # Download human parsing model
         parsing_model_path = "AI_Virtual_Wardrobe/lip_final.pth"
