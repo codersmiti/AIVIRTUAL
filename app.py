@@ -41,6 +41,7 @@ def setup_environment():
             )
             with zipfile.ZipFile(checkpoint_zip, 'r') as zip_ref:
                 zip_ref.extractall(extract_dir)
+            os.remove(checkpoint_zip)  # ✅ Delete zip to save space
 
         # Download human parsing model
         parsing_model_path = "AI_Virtual_Wardrobe/lip_final.pth"
@@ -104,7 +105,6 @@ def run_pipeline_function():
                         "AI_Virtual_Wardrobe/Data_preprocessing/test_color",
                         "AI_Virtual_Wardrobe/Data_preprocessing/test_edge")
 
-        # Run parsing subprocess with logs
         result = subprocess.run([
             sys.executable, "Parsing-/simple_extractor.py",
             "--dataset", "lip",
@@ -134,6 +134,7 @@ def run_pipeline_function():
             st.error("Try-on model execution failed.")
             return False
 
+        st.success("✅ Try-on pipeline completed successfully.")  # ✅ Confirm app wasn't killed
         return True
 
     except Exception as e:
