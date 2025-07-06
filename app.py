@@ -30,22 +30,30 @@ def setup_environment():
                 u2net_model_path,
                 quiet=False
             )
-        
+
         # Download ACGPN checkpoints
         checkpoint_zip = "AI_Virtual_Wardrobe/checkpoints/ACGPN_checkpoints.zip"
-        if not os.path.exists(checkpoint_zip):
-            os.makedirs("AI_Virtual_Wardrobe/checkpoints", exist_ok=True)
+        label2city_path = "AI_Virtual_Wardrobe/checkpoints/label2city"
+        if not os.path.exists(label2city_path):
+            os.makedirs(label2city_path, exist_ok=True)
             gdown.download(
                 "https://drive.google.com/uc?id=1UWT6esQIU_d4tUm8cjxDKMhB8joQbrFx",
                 checkpoint_zip,
                 quiet=False
             )
-            
-            # Extract using Python zipfile instead of system unzip
+
+            # Flatten unzip to remove the root folder layer
             import zipfile
             with zipfile.ZipFile(checkpoint_zip, 'r') as zip_ref:
-                zip_ref.extractall("AI_Virtual_Wardrobe/checkpoints/label2city")
-        
+                for member in zip_ref.namelist():
+                    if member.endswith('/'):
+                        continue
+                    filename = os.path.basename(member)
+                    if filename:
+                        target_path = os.path.join(label2city_path, filename)
+                        with zip_ref.open(member) as source, open(target_path, "wb") as target:
+                            target.write(source.read())
+
         # Download human parsing model
         parsing_model_path = "AI_Virtual_Wardrobe/lip_final.pth"
         if not os.path.exists(parsing_model_path):
@@ -54,7 +62,7 @@ def setup_environment():
                 parsing_model_path,
                 quiet=False
             )
-        
+
         # Create folder structure
         subdirs = [
             "inputs/img", "inputs/cloth",
@@ -70,13 +78,14 @@ def setup_environment():
         ]
         for d in subdirs:
             os.makedirs(d, exist_ok=True)
-            
+
         st.success("Environment setup complete!")
         return True
-        
+
     except Exception as e:
         st.error(f"Setup failed: {str(e)}")
         return False
+
 
 def run_pipeline_function():
     """Run the entire pipeline as a function instead of separate process"""
