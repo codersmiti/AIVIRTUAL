@@ -6,9 +6,9 @@ numpy==1.26.4
 opencv-python
 scikit-image
 
-# PyTorch core + vision
-# torch==2.2.2
-# torchvision==0.17.2
+# PyTorch core + vision (Python 3.12 compatible)
+torch==2.2.2
+torchvision==0.17.2
 
 # U2Net (image segmentation)
 scipy
@@ -18,3 +18,4 @@ matplotlib
 
 # For JSON pose keypoints and text I/O
 json5
+
