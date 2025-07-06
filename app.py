@@ -50,10 +50,9 @@ def setup_environment():
                         continue
                     filename = os.path.basename(member)
                     if filename:
-                        target_path = os.path.join(label2city_path, filename)
-                        with zip_ref.open(member) as source, open(target_path, "wb") as target:
-                            target.write(source.read())
-
+                        if filename.endswith(".pth"):
+                             with zip_ref.open(member) as source, open(os.path.join(label2city_path, filename), "wb") as target:
+                                 target.write(source.read())
         # Download human parsing model
         parsing_model_path = "AI_Virtual_Wardrobe/lip_final.pth"
         if not os.path.exists(parsing_model_path):
