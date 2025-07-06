@@ -1,14 +1,6 @@
 import os
 import sys
-import subprocess
-
-# Force reinstall of Pillow in case PIL is not recognized (Streamlit Cloud fix)
-try:
-    from PIL import Image
-except ImportError:
-    subprocess.run(["pip", "install", "--force-reinstall", "Pillow==10.3.0"])
-    from PIL import Image
-
+from PIL import Image
 import gdown
 
 # Add U2Net path
@@ -42,11 +34,9 @@ cloth.save(f"AI_Virtual_Wardrobe/Data_preprocessing/test_color/{cloth_name}")
 
 # Run U2Net for cloth edge extraction
 u2net = u2net_load.model("u2netp")
-u2net_run.infer(
-    u2net,
-    "AI_Virtual_Wardrobe/Data_preprocessing/test_color",
-    "AI_Virtual_Wardrobe/Data_preprocessing/test_edge"
-)
+u2net_run.infer(u2net,
+                "AI_Virtual_Wardrobe/Data_preprocessing/test_color",
+                "AI_Virtual_Wardrobe/Data_preprocessing/test_edge")
 
 # Run human parsing
 os.system("python Parsing-/simple_extractor.py "
@@ -67,5 +57,6 @@ with open("AI_Virtual_Wardrobe/Data_preprocessing/test_pairs.txt", "w") as f:
 
 # Run virtual try-on model
 os.system("python AI_Virtual_Wardrobe/test.py")
+
 
 
