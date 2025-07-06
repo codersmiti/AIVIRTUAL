@@ -1,7 +1,5 @@
---no-cache-dir
 streamlit
 gdown
-Pillow==10.3.0
 numpy==1.26.4
 opencv-python
 scikit-image
@@ -10,3 +8,5 @@ torchvision==0.17.2
 scipy
 matplotlib
 json5
+Pillow==10.3.0
+
