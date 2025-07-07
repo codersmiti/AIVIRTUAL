@@ -4,31 +4,6 @@ import sys
 import subprocess
 from shutil import move
 from PIL import Image
-import gdown
-import requests
-
-# === UTILITY FUNCTION ===
-def download_if_missing(filename, gdrive_url=None, hf_url=None):
-    if os.path.exists(filename):
-        return True
-    try:
-        if gdrive_url:
-            st.warning(f"📥 Downloading {filename} from Google Drive...")
-            gdown.download(gdrive_url, filename, quiet=False)
-        elif hf_url:
-            st.warning(f"📥 Downloading {filename} from Hugging Face...")
-            response = requests.get(hf_url)
-            response.raise_for_status()
-            with open(filename, "wb") as f:
-                f.write(response.content)
-        else:
-            st.error(f"❌ No URL for {filename}")
-            return False
-        st.success(f"✅ Downloaded {filename}")
-        return True
-    except Exception as e:
-        st.error(f"❌ Failed to download {filename}: {str(e)}")
-        return False
 
 # === SETUP ===
 def setup_environment():
@@ -61,11 +36,7 @@ def setup_environment():
         for d in subdirs:
             os.makedirs(d, exist_ok=True)
 
-        st.write("📦 Downloading missing model files if needed...")
-        download_if_missing("u2netp.pth", hf_url="https://huggingface.co/codersmiti/models/resolve/main/u2netp.pth")
-        download_if_missing("pose_iter_440000.caffemodel", hf_url="https://huggingface.co/codersmiti/models/resolve/main/pose_iter_440000.caffemodel")
-        download_if_missing("exp-schp-201908261155-lip.pth", gdrive_url="https://drive.google.com/uc?id=1k4dllHpu0bdx38J7H28rVVLpU-kOHmnH")
-
+        st.write("📦 Moving model files into place...")
         model_files = {
             "u2netp.pth": "u2net/saved_models/u2netp/u2netp.pth",
             "pose_iter_440000.caffemodel": "AI_Virtual_Wardrobe/pose/pose_iter_440000.caffemodel",
@@ -76,7 +47,6 @@ def setup_environment():
             "ACGPN_checkpoints/label2city/latest_net_U.pth": "AI_Virtual_Wardrobe/checkpoints/label2city/latest_net_U.pth",
             "ACGPN_checkpoints/label2city/opt.txt": "AI_Virtual_Wardrobe/checkpoints/label2city/opt.txt",
         }
-
         for src, dest in model_files.items():
             if os.path.exists(src) and not os.path.exists(dest):
                 move(src, dest)
@@ -86,7 +56,7 @@ def setup_environment():
         st.error(f"Setup failed: {str(e)}")
         return False
 
-# === PIPELINE ===
+
 def run_pipeline_function():
     try:
         st.write("🧱 Step 1: Appending sys paths...")
@@ -152,12 +122,20 @@ def run_pipeline_function():
 
         st.write("🧪 Step 10: Running final try-on test...")
         test_py_path = os.path.join("AI_Virtual_Wardrobe", "test.py")
+        st.write("🛠 Command:", f"{sys.executable} {test_py_path}")
+
         result = subprocess.run(
             [sys.executable, test_py_path],
-            capture_output=True, text=True
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=180
         )
-        st.write("📤 Try-On STDOUT:", result.stdout)
-        st.write("⚠️ Try-On STDERR:", result.stderr)
+
+        if result.stdout:
+            st.text("📤 Try-On STDOUT:\n" + result.stdout)
+        if result.stderr:
+            st.text("⚠️ Try-On STDERR:\n" + result.stderr)
 
         if result.returncode != 0:
             st.error("❌ Final try-on test failed.")
@@ -166,21 +144,26 @@ def run_pipeline_function():
         st.write("✅ Try-on pipeline completed successfully.")
         return True
 
+    except subprocess.TimeoutExpired:
+        st.error("🚨 Try-on step timed out. Model might be too heavy for this environment.")
+        return False
     except Exception as e:
         st.error(f"🚨 Pipeline crashed: {str(e)}")
         return False
+
 
 # === STREAMLIT UI ===
 st.title("👗 AI Virtual Try-On")
 st.markdown("Upload your image and clothing to generate a virtual try-on result.")
 
+# Auto-setup if not present
 if st.button("🔧 Setup Environment (Required First Time)") or not os.path.exists("AI_Virtual_Wardrobe"):
     with st.spinner("Setting up..."):
         success = setup_environment()
         if success:
             st.success("✅ Setup complete.")
         else:
-            st.error("❌ Setup failed.")
+            st.error("❌ Setup failed. See logs above.")
 
 uploaded_img = st.file_uploader("📷 Upload your person image", type=["jpg", "png"])
 uploaded_cloth = st.file_uploader("👕 Upload your cloth image", type=["jpg", "png"])
@@ -197,11 +180,12 @@ if uploaded_img and uploaded_cloth:
                 f.write(uploaded_cloth.read())
 
             if run_pipeline_function():
-                tryon_path = "results/test/try-on/test_label/000001_0.png"
+                tryon_path = "results/test/try-on/000001_0.png"
                 if os.path.exists(tryon_path):
                     st.image(tryon_path, caption="👗 Try-On Result")
                 else:
                     st.error("❌ Try-on result not found.")
             else:
                 st.error("❌ Try-on pipeline failed. See logs above.")
+
 
