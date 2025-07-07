@@ -16,7 +16,7 @@ def setup_environment():
         if not os.path.exists("u2net"):
             os.system("git clone https://github.com/jayneel-shah18/u2net.git")
 
-        # Create subdirectories
+        # Create required folders
         subdirs = [
             "inputs/img", "inputs/cloth",
             "AI_Virtual_Wardrobe/Data_preprocessing/test_color",
@@ -46,13 +46,11 @@ def setup_environment():
             "ACGPN_checkpoints/label2city/latest_net_U.pth": "AI_Virtual_Wardrobe/checkpoints/label2city/latest_net_U.pth",
             "ACGPN_checkpoints/label2city/opt.txt": "AI_Virtual_Wardrobe/checkpoints/label2city/opt.txt",
         }
-
         for src, dest in model_files.items():
             if os.path.exists(src) and not os.path.exists(dest):
                 move(src, dest)
 
         return True
-
     except Exception as e:
         st.error(f"Setup failed: {str(e)}")
         return False
@@ -60,14 +58,16 @@ def setup_environment():
 
 def run_pipeline_function():
     try:
+        # Setup Python paths after cloning
         sys.path.append("u2net")
         sys.path.append("AI_Virtual_Wardrobe")
 
-        import u2net_load, u2net_run
         from predict_pose import generate_pose_keypoints
+        import u2net_load, u2net_run
 
         img_name = "000001_0.png"
         cloth_name = "000001_1.png"
+
         img_path = f"AI_Virtual_Wardrobe/inputs/img/{img_name}"
         cloth_path = f"AI_Virtual_Wardrobe/inputs/cloth/{cloth_name}"
 
@@ -77,11 +77,15 @@ def run_pipeline_function():
         img.save(f"AI_Virtual_Wardrobe/Data_preprocessing/test_img/{img_name}")
         cloth.save(f"AI_Virtual_Wardrobe/Data_preprocessing/test_color/{cloth_name}")
 
+        # U2Net Inference
         u2net = u2net_load.model("u2netp")
-        u2net_run.infer(u2net,
-                        "AI_Virtual_Wardrobe/Data_preprocessing/test_color",
-                        "AI_Virtual_Wardrobe/Data_preprocessing/test_edge")
+        u2net_run.infer(
+            u2net,
+            "AI_Virtual_Wardrobe/Data_preprocessing/test_color",
+            "AI_Virtual_Wardrobe/Data_preprocessing/test_edge"
+        )
 
+        # Human Parsing
         result = subprocess.run([
             sys.executable, "Parsing-/simple_extractor.py",
             "--dataset", "lip",
@@ -89,25 +93,31 @@ def run_pipeline_function():
             "--input-dir", "AI_Virtual_Wardrobe/Data_preprocessing/test_img",
             "--output-dir", "AI_Virtual_Wardrobe/Data_preprocessing/test_label"
         ], capture_output=True, text=True)
+
         if result.returncode != 0:
+            st.error(f"Parsing failed:\n{result.stderr}")
             return False
 
+        # Pose Estimation
         generate_pose_keypoints(
             f"AI_Virtual_Wardrobe/Data_preprocessing/test_img/{img_name}",
             f"AI_Virtual_Wardrobe/Data_preprocessing/test_pose/{img_name.replace('.png', '_keypoints.json')}"
         )
 
+        # Write test pairs
         with open("AI_Virtual_Wardrobe/Data_preprocessing/test_pairs.txt", "w") as f:
             f.write(f"{img_name} {cloth_name}")
 
+        # Final test run
         result = subprocess.run([sys.executable, "AI_Virtual_Wardrobe/test.py"],
                                 capture_output=True, text=True)
         if result.returncode != 0:
+            st.error(f"Final try-on test failed:\n{result.stderr}")
             return False
 
         return True
-
-    except Exception:
+    except Exception as e:
+        st.error(f"Pipeline error: {str(e)}")
         return False
 
 
@@ -115,7 +125,7 @@ def run_pipeline_function():
 st.title("👗 AI Virtual Try-On")
 st.markdown("Upload your image and clothing to generate a virtual try-on result.")
 
-if st.button("🔧 Setup Environment (Required First Time)"):
+if st.button("🔧 Setup Environment (Required First Time)") or not os.path.exists("AI_Virtual_Wardrobe"):
     with st.spinner("Setting up..."):
         success = setup_environment()
         if success:
@@ -144,5 +154,6 @@ if uploaded_img and uploaded_cloth:
                 else:
                     st.error("Try-on result not found.")
             else:
-                st.error("Pipeline failed. Please retry.")
+                st.error("Pipeline failed. Please check logs or try again.")
+
 
