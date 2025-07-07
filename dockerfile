@@ -24,6 +24,7 @@ RUN pip install -r requirements.txt
 
 # Expose port for Streamlit
 EXPOSE 7860
-
+ENV STREAMLIT_HOME=/code/.streamlit
+RUN mkdir -p $STREAMLIT_HOME
 # Run Streamlit app
 CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0"]
