@@ -104,7 +104,7 @@ def run_pipeline_function():
         st.write("🔍 Parsing STDOUT:", result.stdout)
         st.write("❌ Parsing STDERR:", result.stderr)
         if result.returncode != 0:
-            st.error("❌ Human parsing failed. See STDERR above.")
+            st.error("❌ Human parsing failed.")
             return False
 
         st.write("✅ Human parsing complete.")
@@ -120,14 +120,25 @@ def run_pipeline_function():
         with open("AI_Virtual_Wardrobe/Data_preprocessing/test_pairs.txt", "w") as f:
             f.write(f"{img_name} {cloth_name}")
 
+        # DEBUGGING BEFORE test.py
+        st.write("📂 Current working directory:", os.getcwd())
+        st.write("📁 Contents of AI_Virtual_Wardrobe:")
+        st.write(os.listdir("AI_Virtual_Wardrobe"))
+
         st.write("🧪 Step 10: Running final try-on test...")
-        result = subprocess.run([sys.executable, "AI_Virtual_Wardrobe/test.py"],
-                                capture_output=True, text=True)
+        test_py_path = os.path.join("AI_Virtual_Wardrobe", "test.py")
+        st.write("🛠 Command:", f"{sys.executable} {test_py_path}")
+
+        result = subprocess.run(
+            [sys.executable, test_py_path],
+            capture_output=True, text=True
+        )
 
         st.write("📤 Try-On STDOUT:", result.stdout)
         st.write("⚠️ Try-On STDERR:", result.stderr)
+
         if result.returncode != 0:
-            st.error("❌ Final try-on test failed. See STDERR above.")
+            st.error("❌ Final try-on test failed. See above logs.")
             return False
 
         st.write("✅ Try-on pipeline completed successfully.")
@@ -136,6 +147,7 @@ def run_pipeline_function():
     except Exception as e:
         st.error(f"🚨 Pipeline crashed: {str(e)}")
         return False
+
 
 
 # === STREAMLIT UI ===
