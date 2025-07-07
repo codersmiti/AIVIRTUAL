@@ -2,13 +2,13 @@ import streamlit as st
 import os
 import sys
 import subprocess
-import zipfile
+from shutil import move
 from PIL import Image
-import gdown
 
 # === SETUP ===
 def setup_environment():
     try:
+        # Clone necessary repositories
         if not os.path.exists("AI_Virtual_Wardrobe"):
             os.system("git clone https://github.com/jayneel-shah18/AI_Virtual_Wardrobe.git")
         if not os.path.exists("Parsing-"):
@@ -16,36 +16,7 @@ def setup_environment():
         if not os.path.exists("u2net"):
             os.system("git clone https://github.com/jayneel-shah18/u2net.git")
 
-        u2net_model_path = "u2net/saved_models/u2netp/u2netp.pth"
-        if not os.path.exists(u2net_model_path):
-            os.makedirs("u2net/saved_models/u2netp", exist_ok=True)
-            gdown.download(
-                "https://drive.google.com/uc?id=1rbSTGKAE-MTxBYHd-51l2hMOQPT_7EPy",
-                u2net_model_path,
-                quiet=False
-            )
-
-        checkpoint_zip = "AI_Virtual_Wardrobe/checkpoints/ACGPN_checkpoints.zip"
-        extract_dir = "AI_Virtual_Wardrobe/checkpoints"
-        if not os.path.exists(os.path.join(extract_dir, "latest_net_G.pth")):
-            os.makedirs(extract_dir, exist_ok=True)
-            gdown.download(
-                "https://drive.google.com/uc?id=1UWT6esQIU_d4tUm8cjxDKMhB8joQbrFx",
-                checkpoint_zip,
-                quiet=False
-            )
-            with zipfile.ZipFile(checkpoint_zip, 'r') as zip_ref:
-                zip_ref.extractall(extract_dir)
-            os.remove(checkpoint_zip)
-
-        parsing_model_path = "AI_Virtual_Wardrobe/lip_final.pth"
-        if not os.path.exists(parsing_model_path):
-            gdown.download(
-                "https://drive.google.com/uc?id=1k4dllHpu0bdx38J7H28rVVLpU-kOHmnH",
-                parsing_model_path,
-                quiet=False
-            )
-
+        # Create subdirectories
         subdirs = [
             "inputs/img", "inputs/cloth",
             "AI_Virtual_Wardrobe/Data_preprocessing/test_color",
@@ -57,9 +28,28 @@ def setup_environment():
             "AI_Virtual_Wardrobe/Data_preprocessing/test_colormask",
             "AI_Virtual_Wardrobe/inputs/img",
             "AI_Virtual_Wardrobe/inputs/cloth",
+            "u2net/saved_models/u2netp",
+            "AI_Virtual_Wardrobe/pose",
+            "AI_Virtual_Wardrobe/checkpoints/label2city"
         ]
         for d in subdirs:
             os.makedirs(d, exist_ok=True)
+
+        # Move model files into place
+        model_files = {
+            "u2netp.pth": "u2net/saved_models/u2netp/u2netp.pth",
+            "pose_iter_440000.caffemodel": "AI_Virtual_Wardrobe/pose/pose_iter_440000.caffemodel",
+            "exp-schp-201908261155-lip.pth": "AI_Virtual_Wardrobe/lip_final.pth",
+            "ACGPN_checkpoints/label2city/latest_net_G.pth": "AI_Virtual_Wardrobe/checkpoints/label2city/latest_net_G.pth",
+            "ACGPN_checkpoints/label2city/latest_net_G1.pth": "AI_Virtual_Wardrobe/checkpoints/label2city/latest_net_G1.pth",
+            "ACGPN_checkpoints/label2city/latest_net_G2.pth": "AI_Virtual_Wardrobe/checkpoints/label2city/latest_net_G2.pth",
+            "ACGPN_checkpoints/label2city/latest_net_U.pth": "AI_Virtual_Wardrobe/checkpoints/label2city/latest_net_U.pth",
+            "ACGPN_checkpoints/label2city/opt.txt": "AI_Virtual_Wardrobe/checkpoints/label2city/opt.txt",
+        }
+
+        for src, dest in model_files.items():
+            if os.path.exists(src) and not os.path.exists(dest):
+                move(src, dest)
 
         return True
 
@@ -75,11 +65,6 @@ def run_pipeline_function():
 
         import u2net_load, u2net_run
         from predict_pose import generate_pose_keypoints
-
-        pose_model_path = "AI_Virtual_Wardrobe/pose/pose_iter_440000.caffemodel"
-        if not os.path.exists(pose_model_path):
-            os.makedirs("AI_Virtual_Wardrobe/pose", exist_ok=True)
-            gdown.download(id="1bcsYvDtZMdF-P8rLSmr8qQ-NvjR-4Fd5", output=pose_model_path, quiet=False)
 
         img_name = "000001_0.png"
         cloth_name = "000001_1.png"
@@ -130,7 +115,6 @@ def run_pipeline_function():
 st.title("👗 AI Virtual Try-On")
 st.markdown("Upload your image and clothing to generate a virtual try-on result.")
 
-# Button: Manual environment setup
 if st.button("🔧 Setup Environment (Required First Time)"):
     with st.spinner("Setting up..."):
         success = setup_environment()
@@ -161,3 +145,4 @@ if uploaded_img and uploaded_cloth:
                     st.error("Try-on result not found.")
             else:
                 st.error("Pipeline failed. Please retry.")
+
