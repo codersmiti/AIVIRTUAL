@@ -4,6 +4,31 @@ import sys
 import subprocess
 from shutil import move
 from PIL import Image
+import gdown
+import requests
+
+# === UTILITY FUNCTION ===
+def download_if_missing(filename, gdrive_url=None, hf_url=None):
+    if os.path.exists(filename):
+        return True
+    try:
+        if gdrive_url:
+            st.warning(f"📥 Downloading {filename} from Google Drive...")
+            gdown.download(gdrive_url, filename, quiet=False)
+        elif hf_url:
+            st.warning(f"📥 Downloading {filename} from Hugging Face...")
+            response = requests.get(hf_url)
+            response.raise_for_status()
+            with open(filename, "wb") as f:
+                f.write(response.content)
+        else:
+            st.error(f"❌ No URL for {filename}")
+            return False
+        st.success(f"✅ Downloaded {filename}")
+        return True
+    except Exception as e:
+        st.error(f"❌ Failed to download {filename}: {str(e)}")
+        return False
 
 # === SETUP ===
 def setup_environment():
@@ -36,7 +61,11 @@ def setup_environment():
         for d in subdirs:
             os.makedirs(d, exist_ok=True)
 
-        st.write("📦 Moving model files into place...")
+        st.write("📦 Downloading missing model files if needed...")
+        download_if_missing("u2netp.pth", hf_url="https://huggingface.co/codersmiti/models/resolve/main/u2netp.pth")
+        download_if_missing("pose_iter_440000.caffemodel", hf_url="https://huggingface.co/codersmiti/models/resolve/main/pose_iter_440000.caffemodel")
+        download_if_missing("exp-schp-201908261155-lip.pth", gdrive_url="https://drive.google.com/uc?id=1k4dllHpu0bdx38J7H28rVVLpU-kOHmnH")
+
         model_files = {
             "u2netp.pth": "u2net/saved_models/u2netp/u2netp.pth",
             "pose_iter_440000.caffemodel": "AI_Virtual_Wardrobe/pose/pose_iter_440000.caffemodel",
@@ -47,6 +76,7 @@ def setup_environment():
             "ACGPN_checkpoints/label2city/latest_net_U.pth": "AI_Virtual_Wardrobe/checkpoints/label2city/latest_net_U.pth",
             "ACGPN_checkpoints/label2city/opt.txt": "AI_Virtual_Wardrobe/checkpoints/label2city/opt.txt",
         }
+
         for src, dest in model_files.items():
             if os.path.exists(src) and not os.path.exists(dest):
                 move(src, dest)
@@ -56,7 +86,7 @@ def setup_environment():
         st.error(f"Setup failed: {str(e)}")
         return False
 
-
+# === PIPELINE ===
 def run_pipeline_function():
     try:
         st.write("🧱 Step 1: Appending sys paths...")
@@ -120,25 +150,17 @@ def run_pipeline_function():
         with open("AI_Virtual_Wardrobe/Data_preprocessing/test_pairs.txt", "w") as f:
             f.write(f"{img_name} {cloth_name}")
 
-        # DEBUGGING BEFORE test.py
-        st.write("📂 Current working directory:", os.getcwd())
-        st.write("📁 Contents of AI_Virtual_Wardrobe:")
-        st.write(os.listdir("AI_Virtual_Wardrobe"))
-
         st.write("🧪 Step 10: Running final try-on test...")
         test_py_path = os.path.join("AI_Virtual_Wardrobe", "test.py")
-        st.write("🛠 Command:", f"{sys.executable} {test_py_path}")
-
         result = subprocess.run(
             [sys.executable, test_py_path],
             capture_output=True, text=True
         )
-
         st.write("📤 Try-On STDOUT:", result.stdout)
         st.write("⚠️ Try-On STDERR:", result.stderr)
 
         if result.returncode != 0:
-            st.error("❌ Final try-on test failed. See above logs.")
+            st.error("❌ Final try-on test failed.")
             return False
 
         st.write("✅ Try-on pipeline completed successfully.")
@@ -148,20 +170,17 @@ def run_pipeline_function():
         st.error(f"🚨 Pipeline crashed: {str(e)}")
         return False
 
-
-
 # === STREAMLIT UI ===
 st.title("👗 AI Virtual Try-On")
 st.markdown("Upload your image and clothing to generate a virtual try-on result.")
 
-# Auto-setup if not present
 if st.button("🔧 Setup Environment (Required First Time)") or not os.path.exists("AI_Virtual_Wardrobe"):
     with st.spinner("Setting up..."):
         success = setup_environment()
         if success:
             st.success("✅ Setup complete.")
         else:
-            st.error("❌ Setup failed. See logs above.")
+            st.error("❌ Setup failed.")
 
 uploaded_img = st.file_uploader("📷 Upload your person image", type=["jpg", "png"])
 uploaded_cloth = st.file_uploader("👕 Upload your cloth image", type=["jpg", "png"])
