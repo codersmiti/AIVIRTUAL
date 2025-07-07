@@ -126,8 +126,8 @@ def run_pipeline_function():
         test_py_path = os.path.join("AI_Virtual_Wardrobe", "test.py")
         st.write("🛠 Command:", f"{sys.executable} {test_py_path}")
 
-        mem = psutil.Process(os.getpid()).memory_info().rss / 1024**2
-        st.write(f"🔍 App memory usage before test.py: {mem:.2f} MB")
+        # mem = psutil.Process(os.getpid()).memory_info().rss / 1024**2
+        # st.write(f"🔍 App memory usage before test.py: {mem:.2f} MB")
 
 
 
