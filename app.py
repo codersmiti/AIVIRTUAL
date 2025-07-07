@@ -4,6 +4,8 @@ import sys
 import subprocess
 from shutil import move
 from PIL import Image
+import psutil
+
 
 # === SETUP ===
 def setup_environment():
@@ -123,6 +125,9 @@ def run_pipeline_function():
         st.write("🧪 Step 10: Running final try-on test...")
         test_py_path = os.path.join("AI_Virtual_Wardrobe", "test.py")
         st.write("🛠 Command:", f"{sys.executable} {test_py_path}")
+        mem = psutil.virtual_memory()
+        st.write(f"🔍 Memory Available: {mem.available / 1024**2:.2f} MB")
+
 
         result = subprocess.run(
             [sys.executable, test_py_path],
